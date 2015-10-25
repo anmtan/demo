@@ -86,8 +86,9 @@ exports.destroy = function(req, res){
     });
 };
 
-(function(){
-    var runningTime = 4 * 60 * 60 * 1000;
+// Streaming tweets
+exports.stream = function(req, res){
+    var runningTime = req.params.id * 60 * 60 * 1000;
     
     client.stream('statuses/filter', {track: 'javascript'}, function(stream) {
   	stream.on('data', function(tweet) {
@@ -119,7 +120,8 @@ exports.destroy = function(req, res){
     	    }, runningTime);
 	}
     });	
-})();
+    return res.status(200);
+};
 
 function handleError(res, err) {
   return res.status(500).send(err);
