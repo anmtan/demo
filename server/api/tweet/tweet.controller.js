@@ -5,6 +5,15 @@ AWS.config.region = 'us-west-2';
 var s3 = new AWS.S3();
 var bucket = 'tweetcollections';
 
+var Twitter = require('twitter');
+ 
+var client = new Twitter({
+  consumer_key: 'MMTVI11tkg9iovp456V9iYLOz',
+  consumer_secret: 'l322IrX6w0hhNEgf6MDf7xeenZb7oLJdWU4g21tNJSCbuAYTdo',
+  access_token_key: '164186506-Fq2Qt1RISAPa7Dp8jMjT1BoNTwImFLKuMdpfw58z',
+  access_token_secret: 'eLkGavuZIl67GjXlV3KMSo7aiVjgb2aFCXHRKoxaCIhe5'
+});
+
 // Get list of tweets
 exports.index = function(req, res){
     var params = {Bucket : bucket};
@@ -76,6 +85,41 @@ exports.destroy = function(req, res){
 	});
     });
 };
+
+(function(){
+    var runningTime = 4 * 60 * 60 * 1000;
+    
+    client.stream('statuses/filter', {track: 'javascript'}, function(stream) {
+  	stream.on('data', function(tweet) {
+    	    //console.log(tweet.text);
+	    
+	    var params = {Bucket : bucket,
+                  	  Key : Date.now().toString(),
+                  	  Body : JSON.stringify(tweet)};
+    	    s3.putObject(params, function(err, data) {
+            	if (err) {
+		    console.log('Unable to putObject ' + error);
+            	}
+    	    });
+  	});
+ 
+  	stream.on('error', function(error) {
+    	    throw error;
+  	});
+
+	stream.on('end', function() {
+	    console.log('Connection ended.');
+	});
+
+	//Set the runningTime to 0 if you want to keep it running forever
+	if(runningTime > 0) {
+	    console.log('Destroy connection after ' + runningTime + '  seconds');
+	    setTimeout(function(){
+            	stream.destroy();
+    	    }, runningTime);
+	}
+    });	
+})();
 
 function handleError(res, err) {
   return res.status(500).send(err);
