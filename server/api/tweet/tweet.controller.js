@@ -2,7 +2,7 @@
 
 var AWS = require('aws-sdk');
 AWS.config.region = 'us-west-2';
-var s3 = new AWS.S3();
+var s3 = new AWS.S3({signatureVersion: 'v4'});
 var bucket = 'tweetcollections';
 
 var Twitter = require('twitter');
@@ -88,18 +88,22 @@ exports.destroy = function(req, res){
 
 // Streaming tweets
 exports.stream = function(req, res){
-    var runningTime = req.params.id * 60 * 60 * 1000;
+    var hour = req.params.id || 1; //default to 1 hour
+    var runningTime = hour * 60 * 60 * 1000;
     
-    client.stream('statuses/filter', {track: 'javascript'}, function(stream) {
+    client.stream('statuses/filter', {track: 'nielsen'}, function(stream) {
   	stream.on('data', function(tweet) {
-    	    //console.log(tweet.text);
+    	    console.log(tweet.text);
 	    
 	    var params = {Bucket : bucket,
                   	  Key : Date.now().toString(),
-                  	  Body : JSON.stringify(tweet)};
+                  	  Body : JSON.stringify(tweet)
+			  //SSEKMSKeyId : '527e09d6-694d-4656-b3d9-c7d6633ea007',
+			  //ServerSideEncryption : 'aws:kms'
+			 };
     	    s3.putObject(params, function(err, data) {
             	if (err) {
-		    console.log('Unable to putObject ' + error);
+		    console.log('Unable to putObject ' + err + err.stack);
             	}
     	    });
   	});
@@ -126,3 +130,6 @@ exports.stream = function(req, res){
 function handleError(res, err) {
   return res.status(500).send(err);
 }
+
+//FIXME: Remove this later.
+//exports.stream({params:{id:1}}, {status:function(){}});
